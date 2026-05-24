@@ -44,8 +44,13 @@ def _to_read(t: models.DocumentTemplate) -> DocumentTemplateRead:
     )
 
 
-def _persist_fields(t: models.DocumentTemplate, fields: list[FieldDef]) -> None:
+def _persist_fields(
+    db: Session, t: models.DocumentTemplate, fields: list[FieldDef]
+) -> None:
     t.fields.clear()
+    # Flush the deletes so the unique (template_id, name) constraint
+    # doesn't fire on inserts in the same flush cycle.
+    db.flush()
     for i, fd in enumerate(fields):
         t.fields.append(
             models.TemplateField(
@@ -79,7 +84,7 @@ def create_template(
         file_formats=payload.file_formats,
         active=payload.active,
     )
-    _persist_fields(t, payload.fields)
+    _persist_fields(db, t, payload.fields)
     db.add(t)
     db.commit()
     db.refresh(t)
@@ -110,7 +115,7 @@ def update_template(
     if payload.active is not None:
         t.active = payload.active
     if payload.fields is not None:
-        _persist_fields(t, payload.fields)
+        _persist_fields(db, t, payload.fields)
     db.commit()
     db.refresh(t)
     return _to_read(t)
