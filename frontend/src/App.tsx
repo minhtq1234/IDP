@@ -1,5 +1,6 @@
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import ApplicationTypesPage from "./pages/ApplicationTypes";
+import ApplicationTypeEditorPage from "./pages/ApplicationTypeEditor";
 import DocumentTemplatesPage from "./pages/DocumentTemplates";
 import TemplateEditorPage from "./pages/TemplateEditor";
 
@@ -15,6 +16,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/application-types" replace />} />
           <Route path="/application-types" element={<ApplicationTypesPage />} />
+          <Route path="/application-types/:id" element={<ApplicationTypeEditorPage />} />
           <Route path="/templates" element={<DocumentTemplatesPage />} />
           <Route path="/templates/:id" element={<TemplateEditorPage />} />
         </Routes>

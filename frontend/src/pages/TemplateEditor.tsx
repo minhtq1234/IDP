@@ -1,10 +1,92 @@
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, Artifacts, DataType, DocumentTemplate, FieldDef } from "../api";
 
 const TYPES: DataType[] = ["string", "number", "date", "currency", "list", "object"];
 
-const EMPTY_FIELD: FieldDef = { name: "", data_type: "string", required: false, hint: "" };
+const newField = (): FieldDef => ({
+  name: "", data_type: "string", required: false, hint: "",
+});
+
+function FieldRows({
+  fields, onChange, depth = 0,
+}: {
+  fields: FieldDef[];
+  onChange: (next: FieldDef[]) => void;
+  depth?: number;
+}) {
+  const set = (i: number, patch: Partial<FieldDef>) =>
+    onChange(fields.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
+  const remove = (i: number) => onChange(fields.filter((_, idx) => idx !== i));
+
+  return (
+    <table style={depth > 0 ? { background: "#fafbfa" } : undefined}>
+      {depth === 0 && (
+        <thead>
+          <tr>
+            <th>Name</th><th>Type</th><th>Required</th>
+            <th>Hint</th><th>Pattern</th><th></th>
+          </tr>
+        </thead>
+      )}
+      <tbody>
+        {fields.map((f, i) => {
+          const nested = f.data_type === "list" || f.data_type === "object";
+          return (
+            <Fragment key={i}>
+              <tr>
+                <td style={{ paddingLeft: 8 + depth * 16 }}>
+                  <input value={f.name} onChange={(e) => set(i, { name: e.target.value })} />
+                </td>
+                <td>
+                  <select value={f.data_type}
+                    onChange={(e) => {
+                      const dt = e.target.value as DataType;
+                      const isNested = dt === "list" || dt === "object";
+                      set(i, {
+                        data_type: dt,
+                        children: isNested ? (f.children ?? []) : null,
+                      });
+                    }}>
+                    {TYPES.map((x) => <option key={x}>{x}</option>)}
+                  </select>
+                </td>
+                <td style={{ textAlign: "center" }}>
+                  <input type="checkbox" checked={f.required}
+                    onChange={(e) => set(i, { required: e.target.checked })}
+                    style={{ width: "auto" }} />
+                </td>
+                <td><input value={f.hint}
+                  onChange={(e) => set(i, { hint: e.target.value })} /></td>
+                <td><input value={f.regex ?? ""}
+                  onChange={(e) => set(i, { regex: e.target.value || null })} /></td>
+                <td><button onClick={() => remove(i)}>✕</button></td>
+              </tr>
+              {nested && (
+                <tr>
+                  <td colSpan={6} style={{ paddingLeft: 8 + (depth + 1) * 16, background: "#fafbfa" }}>
+                    <div style={{ fontSize: 11, color: "#666", margin: "4px 0" }}>
+                      {f.data_type === "list" ? "Item shape" : "Properties"}:
+                    </div>
+                    <FieldRows
+                      fields={f.children ?? []}
+                      onChange={(next) => set(i, { children: next })}
+                      depth={depth + 1}
+                    />
+                    <button style={{ marginTop: 6 }}
+                      onClick={() => set(i, { children: [...(f.children ?? []), newField()] })}>
+                      + Add child
+                    </button>
+                  </td>
+                </tr>
+              )}
+            </Fragment>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
 
 export default function TemplateEditorPage() {
   const { id = "" } = useParams();
@@ -26,8 +108,7 @@ export default function TemplateEditorPage() {
     setBusy(true);
     try {
       await api.updateTemplate(id, { fields });
-      const a = await api.artifacts(id);
-      setArtifacts(a);
+      setArtifacts(await api.artifacts(id));
     } finally { setBusy(false); }
   };
 
@@ -53,12 +134,6 @@ export default function TemplateEditorPage() {
       alert("LLM suggest failed — check backend logs / LLM_PROVIDER. " + (e as Error).message);
     } finally { setBusy(false); }
   };
-
-  const setF = (i: number, patch: Partial<FieldDef>) =>
-    setFields((f) => f.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
-
-  const remove = (i: number) =>
-    setFields((f) => f.filter((_, idx) => idx !== i));
 
   if (!t) return <div>Loading…</div>;
 
@@ -86,37 +161,9 @@ export default function TemplateEditorPage() {
 
       <div className="card">
         <h3>Fields ({fields.length})</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th><th>Type</th><th>Required</th><th>Hint</th><th>Pattern</th><th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {fields.map((f, i) => (
-              <tr key={i}>
-                <td><input value={f.name} onChange={(e) => setF(i, { name: e.target.value })} /></td>
-                <td>
-                  <select value={f.data_type}
-                    onChange={(e) => setF(i, { data_type: e.target.value as DataType })}>
-                    {TYPES.map((x) => <option key={x}>{x}</option>)}
-                  </select>
-                </td>
-                <td style={{ textAlign: "center" }}>
-                  <input type="checkbox" checked={f.required}
-                    onChange={(e) => setF(i, { required: e.target.checked })}
-                    style={{ width: "auto" }} />
-                </td>
-                <td><input value={f.hint} onChange={(e) => setF(i, { hint: e.target.value })} /></td>
-                <td><input value={f.regex ?? ""}
-                  onChange={(e) => setF(i, { regex: e.target.value || null })} /></td>
-                <td><button onClick={() => remove(i)}>✕</button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <FieldRows fields={fields} onChange={setFields} />
         <div style={{ marginTop: 12 }}>
-          <button onClick={() => setFields((f) => [...f, { ...EMPTY_FIELD }])}>+ Add field</button>
+          <button onClick={() => setFields([...fields, newField()])}>+ Add field</button>
         </div>
       </div>
 

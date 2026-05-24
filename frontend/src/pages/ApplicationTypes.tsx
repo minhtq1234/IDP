@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api, ApplicationType } from "../api";
 
 export default function ApplicationTypesPage() {
@@ -51,7 +52,7 @@ export default function ApplicationTypesPage() {
           <tbody>
             {rows.map((r) => (
               <tr key={r.id}>
-                <td>{r.code}</td>
+                <td><Link to={`/application-types/${r.id}`}>{r.code}</Link></td>
                 <td>{r.name}</td>
                 <td>{r.required_documents.length}</td>
                 <td>
