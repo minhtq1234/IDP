@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import re
+from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+from app.config import settings
 
 DataType = Literal["string", "number", "date", "currency", "list", "object"]
+
+FIELD_NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,62}$")
 
 
 class FieldDef(BaseModel):
@@ -15,10 +21,50 @@ class FieldDef(BaseModel):
     hint: str = ""
     regex: str | None = None
     # Used when data_type is "list" (item shape) or "object" (properties).
-    children: list[FieldDef] | None = None
+    children: list["FieldDef"] | None = None
+
+    @field_validator("name")
+    @classmethod
+    def _name_valid(cls, v: str) -> str:
+        if not FIELD_NAME_RE.match(v):
+            raise ValueError(
+                "field name must be snake_case: lowercase letters, digits, "
+                "underscores; start with a letter; max 63 chars"
+            )
+        return v
+
+    @field_validator("hint")
+    @classmethod
+    def _hint_len(cls, v: str) -> str:
+        if len(v) > settings.hint_max_chars:
+            raise ValueError(f"hint exceeds {settings.hint_max_chars} characters")
+        return v
+
+    @model_validator(mode="after")
+    def _children_consistency(self) -> "FieldDef":
+        nested = self.data_type in ("list", "object")
+        if nested and not self.children:
+            # allow empty list while drafting, but not None
+            self.children = self.children or []
+        if not nested and self.children:
+            raise ValueError(
+                f"field '{self.name}' of type {self.data_type} cannot have children"
+            )
+        return self
 
 
 FieldDef.model_rebuild()
+
+
+class TemplateSampleRead(BaseModel):
+    id: UUID
+    filename: str
+    content_type: str
+    size_bytes: int
+    uploaded_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 # --- Document templates ---------------------------------------------------

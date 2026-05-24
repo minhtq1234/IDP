@@ -5,6 +5,9 @@ import { api, ApplicationType, DocumentTemplate, RequiredDocument } from "../api
 export default function ApplicationTypeEditorPage() {
   const { id = "" } = useParams();
   const [at, setAt] = useState<ApplicationType | null>(null);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [active, setActive] = useState(true);
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
   const [reqs, setReqs] = useState<RequiredDocument[]>([]);
   const [busy, setBusy] = useState(false);
@@ -14,6 +17,9 @@ export default function ApplicationTypeEditorPage() {
     const found = list.find((x) => x.id === id);
     if (!found) return;
     setAt(found);
+    setName(found.name);
+    setDescription(found.description);
+    setActive(found.active);
     setReqs(found.required_documents);
     setTemplates(tpls);
   }, [id]);
@@ -23,8 +29,10 @@ export default function ApplicationTypeEditorPage() {
   const save = async () => {
     setBusy(true);
     try {
-      await api.updateAppType(id, { required_documents: reqs });
+      await api.updateAppType(id, { name, description, active, required_documents: reqs });
       await load();
+    } catch (e) {
+      alert("Save failed: " + (e as Error).message);
     } finally { setBusy(false); }
   };
 
@@ -50,6 +58,23 @@ export default function ApplicationTypeEditorPage() {
       <div className="topbar">
         <h2>{at.name} <span style={{ color: "#888", fontSize: 13 }}>({at.code})</span></h2>
         <button className="primary" onClick={save} disabled={busy}>Save</button>
+      </div>
+
+      <div className="card">
+        <h3>Metadata</h3>
+        <div className="row">
+          <div><label>Name</label><input value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div style={{ flex: 0.4 }}><label>Active</label>
+            <select value={active ? "y" : "n"} onChange={(e) => setActive(e.target.value === "y")}>
+              <option value="y">Active</option>
+              <option value="n">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div className="row">
+          <div><label>Description</label>
+            <input value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+        </div>
       </div>
 
       <div className="card">

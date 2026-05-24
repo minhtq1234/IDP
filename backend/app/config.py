@@ -17,5 +17,9 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-5"
 
+    sample_storage_dir: str = "storage/samples"
+    max_sample_bytes: int = 10 * 1024 * 1024  # 10 MB
+    hint_max_chars: int = 1000
+
 
 settings = Settings()

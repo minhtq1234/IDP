@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { api, Artifacts, DataType, DocumentTemplate, FieldDef } from "../api";
+import { api, Artifacts, DataType, DocumentTemplate, FieldDef, TemplateSample } from "../api";
 
 const TYPES: DataType[] = ["string", "number", "date", "currency", "list", "object"];
 
@@ -91,33 +91,65 @@ function FieldRows({
 export default function TemplateEditorPage() {
   const { id = "" } = useParams();
   const [t, setT] = useState<DocumentTemplate | null>(null);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [active, setActive] = useState(true);
   const [fields, setFields] = useState<FieldDef[]>([]);
+  const [samples, setSamples] = useState<TemplateSample[]>([]);
   const [artifacts, setArtifacts] = useState<Artifacts | null>(null);
   const [busy, setBusy] = useState(false);
   const [sample, setSample] = useState("");
   const [view, setView] = useState<"schema" | "prompt">("schema");
 
   const load = useCallback(async () => {
-    const x = await api.getTemplate(id);
+    const [x, sm] = await Promise.all([api.getTemplate(id), api.listSamples(id)]);
     setT(x);
+    setName(x.name);
+    setDescription(x.description);
+    setActive(x.active);
     setFields(x.fields);
+    setSamples(sm);
   }, [id]);
   useEffect(() => { load(); }, [load]);
 
   const save = async () => {
     setBusy(true);
     try {
-      await api.updateTemplate(id, { fields });
+      await api.updateTemplate(id, { name, description, active, fields });
       setArtifacts(await api.artifacts(id));
+    } catch (e) {
+      alert("Save failed: " + (e as Error).message);
     } finally { setBusy(false); }
   };
 
   const previewArtifacts = async () => {
     setBusy(true);
     try {
-      await api.updateTemplate(id, { fields });
+      await api.updateTemplate(id, { name, description, active, fields });
       setArtifacts(await api.artifacts(id));
+    } catch (e) {
+      alert("Preview failed: " + (e as Error).message);
     } finally { setBusy(false); }
+  };
+
+  const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBusy(true);
+    try {
+      await api.uploadSample(id, file);
+      setSamples(await api.listSamples(id));
+    } catch (err) {
+      alert("Upload failed: " + (err as Error).message);
+    } finally {
+      setBusy(false);
+      e.target.value = "";
+    }
+  };
+
+  const onDeleteSample = async (sid: string) => {
+    await api.deleteSample(id, sid);
+    setSamples(await api.listSamples(id));
   };
 
   const suggest = async () => {
@@ -144,6 +176,52 @@ export default function TemplateEditorPage() {
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={previewArtifacts} disabled={busy}>Preview Schema & Prompt</button>
           <button className="primary" onClick={save} disabled={busy}>Save</button>
+        </div>
+      </div>
+
+      <div className="card">
+        <h3>Metadata</h3>
+        <div className="row">
+          <div><label>Name</label><input value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div style={{ flex: 0.4 }}><label>Active</label>
+            <select value={active ? "y" : "n"} onChange={(e) => setActive(e.target.value === "y")}>
+              <option value="y">Active</option>
+              <option value="n">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div className="row">
+          <div><label>Description</label>
+            <input value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+        </div>
+      </div>
+
+      <div className="card">
+        <h3>Sample Documents ({samples.length})</h3>
+        <table>
+          <thead><tr><th>File</th><th>Type</th><th>Size</th><th>Uploaded</th><th></th></tr></thead>
+          <tbody>
+            {samples.map((s) => (
+              <tr key={s.id}>
+                <td>
+                  <a href={`/api/document-templates/${id}/samples/${s.id}/download`}
+                    target="_blank" rel="noreferrer">{s.filename}</a>
+                </td>
+                <td>{s.content_type}</td>
+                <td>{(s.size_bytes / 1024).toFixed(1)} KB</td>
+                <td>{new Date(s.uploaded_at).toLocaleString()}</td>
+                <td><button onClick={() => onDeleteSample(s.id)}>✕</button></td>
+              </tr>
+            ))}
+            {samples.length === 0 && (
+              <tr><td colSpan={5} style={{ color: "#888" }}>No samples uploaded yet.</td></tr>
+            )}
+          </tbody>
+        </table>
+        <div style={{ marginTop: 10 }}>
+          <label>Upload PDF / JPG / PNG (max 10 MB)</label>
+          <input type="file" accept="application/pdf,image/jpeg,image/png"
+            onChange={onUpload} disabled={busy} />
         </div>
       </div>
 

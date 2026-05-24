@@ -73,6 +73,20 @@ class TemplateField(Base):
     template: Mapped[DocumentTemplate] = relationship(back_populates="fields")
 
 
+class TemplateSample(Base):
+    __tablename__ = "template_samples"
+
+    id: Mapped[UUID] = _uuid_pk()
+    template_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("document_templates.id", ondelete="CASCADE"), index=True
+    )
+    filename: Mapped[str] = mapped_column(String(255))
+    content_type: Mapped[str] = mapped_column(String(128))
+    size_bytes: Mapped[int] = mapped_column(Integer)
+    storage_path: Mapped[str] = mapped_column(Text)
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class ApplicationTypeDocument(Base):
     __tablename__ = "application_type_documents"
     __table_args__ = (

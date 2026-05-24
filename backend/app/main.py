@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import application_types, document_templates, suggest
+from app.api import application_types, document_templates, samples, suggest
 
 app = FastAPI(title="GreenNode IDP — Admin API", version="0.1.0")
 
@@ -14,6 +14,7 @@ app.add_middleware(
 
 app.include_router(application_types.router)
 app.include_router(document_templates.router)
+app.include_router(samples.router)
 app.include_router(suggest.router)
 
 
