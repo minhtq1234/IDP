@@ -1,7 +1,7 @@
 [project]
 name = "idp-backend"
 version = "0.1.0"
-description = "GreenNode IDP backend — Epic E0 template configuration"
+description = "IDP backend — Epic E0 template configuration"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.115",

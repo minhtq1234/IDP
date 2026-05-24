@@ -8,7 +8,7 @@ export default function App() {
   return (
     <div className="shell">
       <nav className="sidebar">
-        <h1>GREENNODE IDP</h1>
+        <h1>IDP ADMIN</h1>
         <NavLink to="/application-types">◈ Application Types</NavLink>
         <NavLink to="/templates">◧ Document Templates</NavLink>
       </nav>

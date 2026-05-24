@@ -1,4 +1,4 @@
-# GreenNode IDP — Phase 1 (Epic E0)
+# IDP — Phase 1 (Epic E0)
 
 Configuration-driven document extraction platform. This scaffold covers
 **Epic E0 (Option C)**: application type and template configuration with
@@ -21,7 +21,7 @@ version history (E0-08) are deferred to Phase 2.
 |---|---|
 | Scope | Option C: E0-01 through E0-06 |
 | Tenancy | Single-tenant |
-| Admin | GreenNode ops only |
+| Admin | Internal ops only |
 | UI language | English only |
 | Field types | string, number, date, currency, list, object, regex validation |
 | Authoring LLM | Single provider per deploy, switched by env var |

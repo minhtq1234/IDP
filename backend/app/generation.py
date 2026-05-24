@@ -60,7 +60,7 @@ def generate_json_schema(
     description: str,
     fields: list[FieldDef],
 ) -> dict:
-    """Generate the standard GreenNode envelope (PRD v2 §6.2).
+    """Generate the standard extraction envelope.
 
     Envelope: document_id, document_type, classification_confidence, fields[].
     The `fields` member is constrained by the template's field definitions.
@@ -73,7 +73,7 @@ def generate_json_schema(
 
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": f"greennode://templates/{template_code}",
+        "$id": f"idp://templates/{template_code}",
         "title": template_name,
         "description": description or f"Extraction output for {template_name}",
         "type": "object",
@@ -106,7 +106,7 @@ def _format_field_for_prompt(field: FieldDef, depth: int = 0) -> str:
     return line
 
 
-PROMPT_TEMPLATE = """You are GreenNode's document extraction VLM. Extract structured \
+PROMPT_TEMPLATE = """You are a document extraction VLM. Extract structured \
 data from the attached document.
 
 DOCUMENT TYPE: {template_name} ({template_code})
